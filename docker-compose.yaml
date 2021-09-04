@@ -1,18 +1,74 @@
 services:
-  mongo:
-    restart: always
-    image: mongo:4.2
+  app:
+    image: prisma-mongo-node
+    build: ./app
+    container_name: app
+    tty: true
+    ports:
+      - 5555:5555
     environment:
-      MONGO_INITDB_ROOT_USERNAME: prisma
+      TZ: Asia/Tokyo
+      DATABASE_URL: mongodb://root:password@mongodb-primary:27017/prisma?authSource=admin
+    restart: always
+    volumes:
+      - .:/workspace
+      - app:/workspace/app/node_modules
+    working_dir: /workspace/app
+    networks:
+      - replset
+
+  mongodb-primary:
+    image: mongo:5
+    hostname: mongodb-primary
+    command: mongod --replSet replset --auth --keyFile /etc/mongod-keyfile
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: prisma
       TZ: Asia/Tokyo
     ports:
-      - "27017:27017"
+      - 27017:27017
     volumes:
-      - mongo:/data/db
-      - mongo:/data/configdb
-      - ./mongo/init:/docker-entrypoint-initdb.d
+      - mongo-primary:/data/db
+      - mongo-primary:/data/configdb
+      - ./mongo/etc/init:/docker-entrypoint-initdb.d:ro
+      - ./mongo/etc/mongod-keyfile:/etc/mongod-keyfile:ro
+    restart: always
+    networks:
+      - replset
+
+  mongodb-secondary:
+    image: mongo:5
+    hostname: mongodb-secondary
+    command: mongod --replSet replset --auth --keyFile /etc/mongod-keyfile
+    volumes:
+      - mongo-secondary:/data/db
+      - mongo-secondary:/data/configdb
+      - ./mongo/etc/mongod-keyfile:/etc/mongod-keyfile:ro
+    ports:
+      - 27012:27017
+    restart: always
+    networks:
+      - replset
+
+  mongodb-arbiter:
+    image: mongo:5
+    hostname: mongodb-arbiter
+    command: mongod --replSet replset --auth --keyFile /etc/mongod-keyfile
+    ports:
+      - 27013:27017
+    volumes:
+      - ./mongo/etc/mongod-keyfile:/etc/mongod-keyfile:ro
+    networks:
+      - replset
+    restart: always
 
 volumes:
-  mongo:
+  app:
+  mongo-primary:
+  mongo-secondary:
+
+networks:
+  replset:
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24

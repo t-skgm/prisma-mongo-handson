@@ -7,21 +7,23 @@ async function main() {
   //
   await prisma.$connect();
 
+  // Reset
+  await prisma.post.deleteMany();
+  await prisma.user.deleteMany();
+
   //
 
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
       name: "Rich",
       email: "hello@prisma.com",
-    },
-  });
-
-  await prisma.post.create({
-    data: {
-      userId: user.id,
-      title: "My first post",
-      body: "Lots of really interesting stuff",
-      slug: "my-first-post",
+      posts: {
+        create: {
+          title: "My first post",
+          body: "Lots of really interesting stuff",
+          slug: "my-first-post",
+        },
+      },
     },
   });
 
