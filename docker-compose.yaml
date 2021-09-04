@@ -1,0 +1,18 @@
+services:
+  mongo:
+    restart: always
+    image: mongo:4.2
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: prisma
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: prisma
+      TZ: Asia/Tokyo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo:/data/db
+      - mongo:/data/configdb
+      - ./mongo/init:/docker-entrypoint-initdb.d
+
+volumes:
+  mongo:
